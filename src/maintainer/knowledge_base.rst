@@ -331,53 +331,62 @@ You will need to re-render the feedstock after making these changes.
 Building Against NumPy
 ----------------------
 
-Packages that link against NumPy need special treatment in the dependency section.
-Finding ``numpy.get_include()`` in ``setup.py`` or ``cimport`` statements in ``.pyx`` or ``.pyd`` files are a telltale sign that the package links against NumPy.
+Packages that link against NumPy are built against the oldest currently
+supported NumPy version and then any NumPy version greater than the one built
+with is used.
 
-In the case of linking, you need to use the ``pin_compatible`` function to ensure having a compatible numpy version at run time:
+To use the NumPy C-API and link to it
 
 .. code-block:: yaml
 
     host:
       - numpy
-    run:
-      - {{ pin_compatible('numpy') }}
 
-
-At the time of writing (January 22, 2022), above is equivalent to the following,
+At the time of writing (October 7, 2022), above is equivalent to the following,
 
 .. code-block:: yaml
 
     host:
-      - numpy   1.18   # [py==37]
-      - numpy   1.18   # [py==38]
-      - numpy   1.19   # [py==39]
+      - numpy   1.20.*   # [py<310]
+      - numpy   1.21.*   # [py>=310]
     run:
-      - numpy >=1.18.5,<2.0.a0   # [py==37]
-      - numpy >=1.18.5,<2.0.a0   # [py==38]
-      - numpy >=1.19.5,<2.0.a0   # [py==39]
+      - numpy >=1.20.3,<2.0.a0   # [py<=310]
+      - numpy >=1.21.6,<2.0.a0   # [py>=310]
 
 See the pinning repository for what the pinning corresponds to at time of writing
 https://github.com/conda-forge/conda-forge-pinning-feedstock/blob/master/recipe/conda_build_config.yaml#L631
 
+Finding ``numpy.get_include()`` in ``setup.py`` or ``cimport`` statements in
+``.pyx`` or ``.pyd`` files are a telltale sign that the package links against
+NumPy. If they are not there, you probably do not need NumPy in ``host`` and
+needs NumPy only in ``run``. However, some ``setup.py`` files might need NumPy
+even though the package does not link to NumPy, in that case you can tell
+conda-build to not impose a constraint on NumPy based on the NumPy build time
+version.
+
+.. code-block:: yaml
+
+   build:
+     ignore_run_exports_from:
+       - numpy
+   requirements:
+     host:
+       - numpy
+       - python
+     build:
+       - python
+
 
 .. admonition:: Notes
 
-    1. You still need to respect minimum supported version of ``numpy`` for the package!
-    That means you cannot use ``numpy 1.9`` if the project requires at least ``numpy 1.12``,
+    You still need to respect minimum supported version of ``numpy`` for the package!
+    That means you cannot use ``numpy 1.20`` if the project requires at least ``numpy 1.22``,
     adjust the minimum version accordingly!
 
     .. code-block:: yaml
 
         host:
-          - numpy 1.12.*
-        run:
-          - {{ pin_compatible('numpy') }}
-
-
-    2. if your package supports ``numpy 1.7``, and you are brave enough :-),
-    there are ``numpy`` packages for ``1.7`` available for Python 2.7 in the channel.
-
+          - numpy 1.22.*
 
 .. _jupyterlab_extension:
 
